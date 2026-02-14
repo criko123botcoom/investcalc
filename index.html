@@ -3,66 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Inversión Pro</title>
+    <title>InvestCalc Pro - SmartInvestPro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f6; color: #2d3436; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .calc-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h1 { font-size: 1.5rem; color: #0984e3; text-align: center; margin-bottom: 20px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        button { width: 100%; background-color: #00b894; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background-color: #00a884; }
-        .result { margin-top: 25px; padding: 15px; background-color: #e8f8f5; border-radius: 8px; text-align: center; }
-        .result span { display: block; font-size: 1.2rem; color: #2d3436; font-weight: bold; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; padding: 40px; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 900px; width: 100%; display: flex; flex-wrap: wrap; gap: 20px; }
+        .inputs { flex: 1; min-width: 300px; }
+        .visuals { flex: 1.5; min-width: 300px; text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; }
+        label { display: block; margin: 10px 0 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background-color: #00b894; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #00947a; }
+        .footer-pro { width: 100%; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.9rem; color: #636e72; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="calc-card">
-    <h1>📈 InvestCalc Pro</h1>
-    
-    <label>Inversión Inicial ($)</label>
-    <input type="number" id="principal" placeholder="Ej: 1000">
-
-    <label>Tasa de Interés Anual (%)</label>
-    <input type="number" id="interest" placeholder="Ej: 10">
-
-    <label>Años</label>
-    <input type="number" id="years" placeholder="Ej: 5">
-
-    <button onclick="calculate()">CALCULAR RETORNO</button>
-
-    <div class="result" id="result-box" style="display:none;">
-        <small>Total Estimado:</small>
-        <span id="total-value">$0.00</span>
+<div class="container">
+    <div class="inputs">
+        <h2>📈 InvestCalc Pro</h2>
+        <label>Inversión Inicial ($)</label>
+        <input type="number" id="principal" placeholder="Ej: 1000">
+        <label>Contribución Mensual ($)</label>
+        <input type="number" id="monthly" placeholder="Ej: 100">
+        <label>Tasa de Interés Anual (%)</label>
+        <input type="number" id="interest" placeholder="Ej: 10">
+        <label>Años</label>
+        <input type="number" id="years" placeholder="Ej: 10">
+        <button onclick="calculate()">CALCULAR CRECIMIENTO</button>
     </div>
-</div>
-<div style="margin-top: 30px; padding: 20px; border-top: 1px solid #eee; text-align: left; font-size: 0.9rem; color: #636e72;">
-    <strong>Descripción del Proyecto:</strong><br>
-    Esta calculadora de inversión profesional permite visualizar el crecimiento de tu capital a través del tiempo. 
-    Utiliza el modelo de interés compuesto, donde los rendimientos se reinvierten para maximizar la generación de riqueza a largo plazo. 
-    Ideal para planificar metas financieras y entender el poder del ahorro constante.
+
+    <div class="visuals">
+        <canvas id="growthChart"></canvas>
+        <h3 id="resultText" style="margin-top:20px; color: #2d3436;"></h3>
+    </div>
+
+    <div class="footer-pro">
+        <p><strong>Descripción:</strong> Esta herramienta utiliza modelos matemáticos para proyectar el interés compuesto y el ahorro sistemático a largo plazo.</p>
+        <p>Desarrollado con éxito por <strong>Cristobal Lopez Ayala</strong> — 2026</p>
+    </div>
 </div>
 
 <script>
-    function calculate() {
-        const p = parseFloat(document.getElementById('principal').value);
-        const r = parseFloat(document.getElementById('interest').value) / 100;
-        const t = parseFloat(document.getElementById('years').value);
-        
-        if(p > 0 && r > 0 && t > 0) {
-            // Fórmula de interés compuesto: A = P(1 + r)^t
-            const amount = p * Math.pow((1 + r), t);
-            document.getElementById('total-value').innerText = '$' + amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('result-box').style.display = 'block';
-        } else {
-            alert("Por favor rellena todos los campos con números válidos.");
+let myChart;
+function calculate() {
+    const p = parseFloat(document.getElementById('principal').value) || 0;
+    const m = parseFloat(document.getElementById('monthly').value) || 0;
+    const r = (parseFloat(document.getElementById('interest').value) || 0) / 100 / 12;
+    const t = (parseFloat(document.getElementById('years').value) || 0) * 12;
+
+    let data = [];
+    let labels = [];
+    let currentBalance = p;
+
+    for (let i = 0; i <= t; i++) {
+        if (i > 0) currentBalance = currentBalance * (1 + r) + m;
+        if (i % 12 === 0) {
+            data.push(currentBalance.toFixed(2));
+            labels.push("Año " + (i/12));
         }
     }
+
+    document.getElementById('resultText').innerText = "Total Estimado: $" + currentBalance.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+    if (myChart) myChart.destroy();
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Crecimiento del Capital ($)',
+                data: data,
+                backgroundColor: '#00b894'
+            }]
+        }
+    });
+}
 </script>
-<footer style="margin-top: 50px; padding: 20px; text-align: center; border-top: 1px dotted #ccc; color: #7f8c8d; font-size: 0.9rem;">
-    Desarrollado con éxito por <strong>Cristobal Lopez Ayala </strong> — 2026
-</footer>
 
 </body>
 </html>
+
